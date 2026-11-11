@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/api/v1/:path*",
+      "destination": "https://hamatrix-back.vercel.app/api/v1/:path*"
+    },
+    {
+      "source": "/uploads/:path*",
+      "destination": "https://hamatrix-back.vercel.app/uploads/:path*"
+    },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

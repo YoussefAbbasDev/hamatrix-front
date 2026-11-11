@@ -1,0 +1,9 @@
+# Files that never need to reach Vercel for the SPA deployment.
+.env
+.env.*
+!.env.example
+e2e/
+test-results/
+playwright-report/
+playwright.config.js
+dist/
