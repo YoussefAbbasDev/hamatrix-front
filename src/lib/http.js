@@ -35,9 +35,9 @@ http.interceptors.request.use((config) => {
 
 /**
  * A reload, a second tab, or a service-worker update can fire two refreshes at
- * once. The first rotates the cookie, the second is rejected while the browser
- * still holds the older cookie. Waiting for the other response to land and
- * retrying once turns that race into a normal login instead of a logout.
+ * once. The first rotates the cookie, the second is told to retry while the
+ * browser still holds the older cookie. Waiting for the other response to land
+ * and retrying once turns that race into a normal login instead of a logout.
  */
 const REFRESH_RETRY_DELAY_MS = 500;
 
@@ -52,7 +52,8 @@ async function requestRefresh() {
   try {
     response = await postRefresh();
   } catch (error) {
-    if (error?.response?.status !== 401) throw error;
+    const code = error?.response?.data?.error?.code;
+    if (code !== 'SESSION_RACE') throw error;
     await new Promise((resolve) => setTimeout(resolve, REFRESH_RETRY_DELAY_MS));
     response = await postRefresh();
   }

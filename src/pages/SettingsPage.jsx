@@ -13,6 +13,7 @@ import { BusinessSection } from '../components/settings/BusinessSection.jsx';
 import { OperationsSection } from '../components/settings/OperationsSection.jsx';
 import { AppearanceSection } from '../components/settings/AppearanceSection.jsx';
 import { CredentialsSection } from '../components/settings/CredentialsSection.jsx';
+import { NotificationsSection } from '../components/settings/NotificationsSection.jsx';
 
 function SectionSkeleton() {
   return (
@@ -144,6 +145,8 @@ export function SettingsPage() {
       />
 
       <CredentialsSection username={user?.username || 'admin'} />
+
+      <NotificationsSection />
     </div>
   );
 }

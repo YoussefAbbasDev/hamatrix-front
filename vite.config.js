@@ -70,6 +70,8 @@ export default defineConfig(() => {
         },
         workbox: {
           globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+          // Classic script with the `push` / `notificationclick` handlers.
+          importScripts: ['push-handler.js'],
           navigateFallback: '/index.html',
           navigateFallbackDenylist: [/^\/api/, /^\/uploads/, /^\/socket\.io/],
           runtimeCaching: [

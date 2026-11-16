@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { io } from 'socket.io-client';
 import { useQueryClient } from '@tanstack/react-query';
 import { authApi } from '../api/auth.js';
+import { notificationsApi } from '../api/notifications.js';
 import { API_ORIGIN } from '../lib/apiConfig.js';
 import { useAuth } from './AuthProvider.jsx';
 import { useToast } from './ToastProvider.jsx';
@@ -20,6 +21,9 @@ const SocketContext = createContext({
  */
 const SOCKET_ENABLED = String(import.meta.env.VITE_ENABLE_SOCKET ?? 'true') !== 'false';
 const POLL_INTERVAL_MS = Number(import.meta.env.VITE_POLL_INTERVAL_MS || 15000);
+
+/** How often an open dashboard asks the server to send due push alerts. */
+const NOTIFY_TICK_INTERVAL_MS = 60_000;
 
 /** Query key prefixes refreshed by each server event. */
 const INVALIDATIONS = {
@@ -156,6 +160,25 @@ export function SocketProvider({ children }) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, queryClient]);
+
+  // Session/stock push alerts are computed on the server. Any logged-in tab
+  // nudges it once a minute; the endpoint is idempotent so several tabs and the
+  // external scheduler can overlap safely.
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+
+    let active = true;
+    const tick = () => {
+      if (active) notificationsApi.tick().catch(() => null);
+    };
+
+    tick();
+    const timer = setInterval(tick, NOTIFY_TICK_INTERVAL_MS);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [isAuthenticated]);
 
   const value = useMemo(
     () => ({ socket, connected, liveUpdates: SOCKET_ENABLED, pollIntervalMs: POLL_INTERVAL_MS }),
