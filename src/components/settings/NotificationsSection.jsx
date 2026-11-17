@@ -6,6 +6,7 @@ import {
   currentSubscription,
   disablePush,
   enablePush,
+  isInAppBrowser,
   isPushSupported,
   permissionState,
 } from '../../lib/push.js';
@@ -15,6 +16,7 @@ import { Button } from '../ui/Button.jsx';
 import { Badge, SectionTitle } from '../ui/Card.jsx';
 
 const supported = isPushSupported();
+const inAppBrowser = isInAppBrowser();
 
 export function NotificationsSection() {
   const toast = useToast();
@@ -115,6 +117,14 @@ export function NotificationsSection() {
         description="تنبيه على الموبايل قبل نهاية وقت الجلسة بـ 10 دقايق، ولما الوقت يخلص، ولما مخزون منتج يوصل حده الأدنى."
         action={<Badge tone={tone}>{label}</Badge>}
       />
+
+      {inAppBrowser && (
+        <p className="mt-4 rounded-lg border border-warning/30 bg-warning/10 px-3.5 py-2.5 text-[12px] leading-relaxed text-warning">
+          انت فاتح الموقع من متصفح جوه تطبيق تاني. اقفل الصفحة دي وافتح
+          <span dir="ltr" className="mx-1 font-mono">hamatrix-front.vercel.app</span>
+          من Chrome مباشرة، وبعدها فعّل الإشعارات.
+        </p>
+      )}
 
       {!supported && (
         <p className="mt-4 rounded-lg border border-danger/30 bg-danger/10 px-3.5 py-2.5 text-[12px] leading-relaxed text-danger">

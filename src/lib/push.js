@@ -61,9 +61,47 @@ export async function currentSubscription() {
   return registration.pushManager.getSubscription();
 }
 
+/** Browsers embedded in other apps (WebViews) cannot register for push. */
+export function isInAppBrowser() {
+  const ua = typeof navigator === 'undefined' ? '' : navigator.userAgent || '';
+  return /(FBAN|FBAV|FB_IAB|Instagram|Line\/|WhatsApp|Twitter|Snapchat|MicroMessenger|; wv\))/i.test(ua);
+}
+
+const PUSH_SERVICE_HINT =
+  'خدمة الإشعارات في المتصفح مش متاحة دلوقتي. اتأكد إنك فاتح الموقع من Chrome نفسه (مش من داخل واتساب أو فيسبوك أو تيليجرام)، وقفل أي VPN أو مانع إعلانات، وحدّث Chrome، وجرب تاني.';
+
+/** Turns the browser's terse push errors into something actionable. */
+function describePushError(error) {
+  const message = String(error?.message || '');
+  if (error?.name === 'NotAllowedError') {
+    return 'لازم تسمح بالإشعارات من إعدادات المتصفح عشان التنبيهات توصل.';
+  }
+  if (/push service/i.test(message)) return PUSH_SERVICE_HINT;
+  if (error?.name === 'InvalidStateError') {
+    return 'الاشتراك القديم باظ. اقفل الصفحة وافتحها تاني ثم جرب.';
+  }
+  return message || 'تعذّر تفعيل الإشعارات على المتصفح ده.';
+}
+
+/** Chrome sometimes fails the first subscribe with a transient FCM error. */
+async function subscribeWithRetry(registration, applicationServerKey) {
+  try {
+    return await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey });
+  } catch (error) {
+    if (!/push service/i.test(String(error?.message || ''))) throw error;
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    return registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey });
+  }
+}
+
 export async function enablePush() {
   if (!isPushSupported()) {
     throw new Error('المتصفح ده مابيدعمش الإشعارات. استخدم Chrome على أندرويد.');
+  }
+  if (isInAppBrowser()) {
+    throw new Error(
+      'انت فاتح الموقع من متصفح جوه تطبيق تاني. افتح hamatrix-front.vercel.app من Chrome مباشرة.',
+    );
   }
 
   const status = await notificationsApi.status();
@@ -79,10 +117,14 @@ export async function enablePush() {
   const registration = await waitForServiceWorker();
   let subscription = await registration.pushManager.getSubscription();
   if (!subscription) {
-    subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(status.publicKey),
-    });
+    try {
+      subscription = await subscribeWithRetry(
+        registration,
+        urlBase64ToUint8Array(status.publicKey),
+      );
+    } catch (error) {
+      throw new Error(describePushError(error));
+    }
   }
 
   await notificationsApi.subscribe(subscription.toJSON());
